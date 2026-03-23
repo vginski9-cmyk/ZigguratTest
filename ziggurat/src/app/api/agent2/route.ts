@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { invokeAgent, parseAgentJSON } from "@/lib/agents/invoke";
 import { AGENT2_SYSTEM_PROMPT } from "@/lib/agents/agent2-prompt";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,16 +40,20 @@ export async function POST(request: NextRequest) {
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const skillLimit = attempt === 1 ? 10 : 6;
-      const descLength = attempt === 1 ? "2-3 sentences" : "1-2 sentences";
+      const skillTarget = attempt === 1 ? "8-12" : "6-8";
+      const descLength = attempt === 1 ? "2-4 sentences" : "2-3 sentences";
 
       const userMessage = [
-        "Here is the validated EJCP. Produce a Contextualized Skill Profile.",
+        "Here is the validated EJCP. Produce a Contextualized Skill Profile following the full Occupation Skills Taxonomy.",
         "",
         "STRICT RULES:",
-        `- Include ONLY the TOP ${skillLimit} most critical skills (must_have and important).`,
+        `- Target ${skillTarget} total skills distributed across all four taxonomy categories.`,
+        "- You MUST have 2-7 Core Role-Specific Skills. Include Baseline Applied, Foundational & Leadership, and Specialization as warranted.",
+        "- Apply the Category Decision Rules (T1-T4) for every skill classification.",
         `- Keep all proficiency descriptions to ${descLength}.`,
-        "- Keep brief sections to 2 short paragraphs each.",
+        "- Every definition starts with the skill name. Every how_utilized starts with the role title.",
+        '- Every proficiency level starts with "At Level [N] Proficiency, a worker can..."',
+        "- Keep brief sections to 2-3 short paragraphs each.",
         "- Your response must be ONLY the JSON object. No markdown, no explanation.",
         "",
         JSON.stringify(ejcpData, null, 2),
@@ -108,7 +112,7 @@ export async function POST(request: NextRequest) {
       version: 1,
       data: JSON.stringify(profileData),
       validationStatus: "ai_enriched",
-      agentVersion: "Skill_Profiler_v2",
+      agentVersion: "Skill_Profiler_v3",
       createdAt: now,
     });
 
