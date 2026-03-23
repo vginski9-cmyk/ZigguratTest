@@ -1,0 +1,318 @@
+export const ZIGGURAT_LAYERS = [
+  {
+    id: "L2",
+    name: "Business Model & Value Capture",
+    category: 1,
+    multi: true,
+    enums: [
+      { value: "product_innovation", label: "Product Innovation (Make-to-Sell)" },
+      { value: "service_provider", label: "Service Provider (Fee-for-Service)" },
+      { value: "subscription", label: "Subscription (Recurring Revenue)" },
+      { value: "platform", label: "Platform / Two-Sided Market" },
+      { value: "freemium_ad", label: "Freemium / Ad-Supported" },
+      { value: "outcome_based", label: "Outcome-Based / Capitated" },
+    ],
+  },
+  {
+    id: "L4",
+    name: "Scale & Complexity",
+    category: 1,
+    multi: false,
+    enums: [
+      { value: "micro", label: "Micro Enterprise (1-9)" },
+      { value: "small", label: "Small Enterprise (10-49)" },
+      { value: "medium", label: "Medium Enterprise (50-249)" },
+      { value: "large", label: "Large Enterprise (250-999)" },
+      { value: "very_large", label: "Very Large / Enterprise (1,000+)" },
+    ],
+  },
+  {
+    id: "L5",
+    name: "Organization Lifecycle Stage",
+    category: 1,
+    multi: false,
+    enums: [
+      { value: "courtship_infant", label: "Courtship / Infant (Seed)" },
+      { value: "go_go_scaling", label: "Go-Go / Scaling (Growth)" },
+      { value: "prime_stable", label: "Prime / Stable (Maturity)" },
+      { value: "aristocracy_decline", label: "Aristocracy / Recrimination (Decline)" },
+    ],
+  },
+  {
+    id: "L6",
+    name: "Digital & Technological Maturity",
+    category: 1,
+    multi: false,
+    enums: [
+      { value: "analog", label: "Analog / Initiating" },
+      { value: "transitioning", label: "Digitally Transitioning (Siloed)" },
+      { value: "integrated", label: "Digital / Integrated" },
+      { value: "ai_augmented", label: "Optimizing / AI-Augmented" },
+    ],
+  },
+  {
+    id: "L7",
+    name: "Geography & Market Context",
+    category: 1,
+    multi: false,
+    enums: [
+      { value: "urban_core", label: "Urban Core (MSA - Principal City)" },
+      { value: "suburban", label: "Suburban (MSA - Balance)" },
+      { value: "rural", label: "Rural (Micropolitan / Non-Core)" },
+      { value: "distributed", label: "Distributed / Remote-First" },
+    ],
+  },
+  {
+    id: "L8",
+    name: "Regulatory & Compliance Envelope",
+    category: 1,
+    multi: false,
+    enums: [
+      { value: "unregulated", label: "Unregulated / General Commercial" },
+      { value: "lightly_regulated", label: "Lightly Regulated (Occupational)" },
+      { value: "heavily_regulated", label: "Heavily Regulated (Systemic)" },
+      { value: "safety_critical", label: "Safety-Critical / Classified" },
+    ],
+  },
+  {
+    id: "L9",
+    name: "Role Level",
+    category: 2,
+    multi: false,
+    enums: [
+      { value: "entry", label: "Entry (Level 1)" },
+      { value: "experienced", label: "Experienced (Level 2/3)" },
+      { value: "senior_lead", label: "Senior / Lead (Level 4)" },
+      { value: "manager", label: "Manager" },
+      { value: "director_exec", label: "Director / Executive" },
+    ],
+  },
+  {
+    id: "L11",
+    name: "Interaction & Stakeholder Intensity",
+    category: 2,
+    multi: true,
+    enums: [
+      { value: "solitary", label: "Solitary / Machine-Interface" },
+      { value: "internal_transactional", label: "Internal Transactional" },
+      { value: "internal_cross_functional", label: "Internal Cross-Functional" },
+      { value: "vendor_partner", label: "Vendor / Technical Partner" },
+      { value: "service_transactional", label: "Service - Transactional (Low Stakes)" },
+      { value: "service_consultative", label: "Service - Consultative (High Stakes)" },
+      { value: "care_vulnerable", label: "Care - Vulnerable Populations" },
+      { value: "enforcement", label: "Enforcement & Conflict" },
+      { value: "high_visibility", label: "High-Visibility / Public" },
+    ],
+  },
+  {
+    id: "L12",
+    name: "Skill Proficiency Target (Dreyfus)",
+    category: 2,
+    multi: false,
+    enums: [
+      { value: "novice", label: "Novice (Dreyfus 1)" },
+      { value: "advanced_beginner", label: "Advanced Beginner (Dreyfus 2)" },
+      { value: "competent", label: "Competent (Dreyfus 3)" },
+      { value: "proficient", label: "Proficient (Dreyfus 4)" },
+      { value: "expert", label: "Expert (Dreyfus 5)" },
+    ],
+  },
+  {
+    id: "L14_physical",
+    name: "Work Mode (Physical)",
+    category: 2,
+    multi: false,
+    enums: [
+      { value: "onsite_fixed", label: "100% Onsite (Fixed)" },
+      { value: "onsite_mobile", label: "100% Onsite (Mobile/Field)" },
+      { value: "hybrid_structured", label: "Hybrid (Structured)" },
+      { value: "hybrid_flexible", label: "Hybrid (Flexible)" },
+      { value: "remote_sync", label: "100% Remote (Sync)" },
+      { value: "remote_async", label: "100% Remote (Async)" },
+    ],
+  },
+  {
+    id: "L14_temporal",
+    name: "Work Mode (Temporal)",
+    category: 2,
+    multi: false,
+    enums: [
+      { value: "standard", label: "Standard Business Hours" },
+      { value: "shift_fixed", label: "Shift Work (Fixed)" },
+      { value: "shift_rotating", label: "Shift Work (Rotating)" },
+      { value: "on_call", label: "On-Call / Variable" },
+    ],
+  },
+  {
+    id: "L15",
+    name: "Cognitive & Sensory Load Profile",
+    category: 2,
+    multi: true,
+    enums: [
+      { value: "vigilance", label: "Vigilance (Monitoring)" },
+      { value: "rapid_switching", label: "Rapid Switching (Triage)" },
+      { value: "deep_focus", label: "Deep Focus (Sustained)" },
+      { value: "procedural", label: "Procedural (Linear)" },
+      { value: "fine_motor", label: "Sensory: Fine Motor Precision" },
+      { value: "spatial", label: "Sensory: Spatial Visualization" },
+      { value: "auditory", label: "Sensory: Auditory Discrimination" },
+      { value: "aesthetic", label: "Sensory: Aesthetic/Color Discrimination" },
+    ],
+  },
+  {
+    id: "L16",
+    name: "Interdependence & Handoff",
+    category: 2,
+    multi: false,
+    enums: [
+      { value: "pooled", label: "Pooled Interdependence" },
+      { value: "sequential", label: "Sequential Interdependence" },
+      { value: "reciprocal", label: "Reciprocal Interdependence" },
+    ],
+  },
+  {
+    id: "L17",
+    name: "Liability & Risk (Consequence of Error)",
+    category: 2,
+    multi: true,
+    enums: [
+      { value: "incidental", label: "Incidental" },
+      { value: "financial_minor", label: "Financial - Minor" },
+      { value: "financial_major", label: "Financial - Major" },
+      { value: "reputational", label: "Reputational" },
+      { value: "safety_minor", label: "Safety - Minor Injury" },
+      { value: "safety_disability", label: "Safety - Permanent Disability" },
+      { value: "safety_life", label: "Safety - Loss of Life" },
+      { value: "national_security", label: "National/Infrastructure Security" },
+    ],
+  },
+  {
+    id: "L21_psychosocial",
+    name: "Psychosocial Safety",
+    category: 3,
+    multi: false,
+    enums: [
+      { value: "toxic", label: "Toxic / High-Risk" },
+      { value: "transactional", label: "Transactional / Isolated" },
+      { value: "compliant", label: "Compliant / Policy-Driven" },
+      { value: "collaborative", label: "Collaborative / Connected" },
+      { value: "high_trust", label: "High-Trust / Psychological Safety" },
+    ],
+  },
+  {
+    id: "L21_autonomy",
+    name: "Task Autonomy",
+    category: 2,
+    multi: false,
+    enums: [
+      { value: "zero", label: "Zero Autonomy (Micromanaged)" },
+      { value: "process", label: "Process Autonomy" },
+      { value: "method", label: "Method Autonomy" },
+      { value: "strategic", label: "Strategic Autonomy" },
+    ],
+  },
+  {
+    id: "L22_supervision",
+    name: "Supervision Model",
+    category: 3,
+    multi: false,
+    enums: [
+      { value: "absent", label: "Absent / Negligent (Laissez-Faire)" },
+      { value: "command_control", label: "Command & Control (Telling)" },
+      { value: "transactional", label: "Transactional (Selling/Participating)" },
+      { value: "coaching", label: "Coaching / Developmental (Delegating)" },
+      { value: "empowering", label: "Empowering / Servant Leadership" },
+    ],
+  },
+  {
+    id: "L22_advancement",
+    name: "Advancement Pathway",
+    category: 3,
+    multi: false,
+    enums: [
+      { value: "none", label: "None / Dead-End" },
+      { value: "adhoc", label: "Ad-Hoc" },
+      { value: "structured", label: "Structured Internal Ladder" },
+      { value: "sponsored", label: "Sponsored External Pathway" },
+    ],
+  },
+  {
+    id: "L23",
+    name: "Schedule Predictability",
+    category: 3,
+    multi: false,
+    enums: [
+      { value: "volatile", label: "Volatile / On-Call (Just-in-Time)" },
+      { value: "variable", label: "Variable / Short-Notice" },
+      { value: "predictable_variable", label: "Predictable Variable" },
+      { value: "fixed", label: "Fixed / Stable" },
+      { value: "worker_controlled", label: "Worker-Controlled (Flex)" },
+    ],
+  },
+  {
+    id: "L25_readiness",
+    name: "Internal Instructional Readiness",
+    category: 4,
+    multi: false,
+    enums: [
+      { value: "none_shadowing", label: "None / Shadowing Only" },
+      { value: "adhoc_tribal", label: "Ad-Hoc / Tribal" },
+      { value: "standardized_documented", label: "Standardized / Documented" },
+      { value: "dedicated_certified", label: "Dedicated / Certified" },
+    ],
+  },
+  {
+    id: "L25_partnership",
+    name: "Partnership Capacity Quadrant",
+    category: 4,
+    multi: false,
+    enums: [
+      { value: "e1", label: "E1 - Open Supporter (Low Clarity / Low Constraint)" },
+      { value: "e2", label: "E2 - Overstretched Participant (Low Clarity / High Constraint)" },
+      { value: "e3", label: "E3 - Strategic Builder (High Clarity / Low Constraint)" },
+      { value: "e4", label: "E4 - Overstretched Anchor (High Clarity / High Constraint)" },
+    ],
+  },
+];
+
+export const CATEGORY_NAMES: Record<number, string> = {
+  1: "Company & Economic Role",
+  2: "Role & Work Architecture",
+  3: "Compensation & Job Quality",
+  4: "Measurement & Training",
+};
+
+export const BGI_CATEGORIES = [
+  "Core Role-Specific Skills",
+  "Baseline Applied Skills",
+  "Foundational & Leadership Skills",
+  "Specialization",
+] as const;
+
+export const SKILL_LABELS = [
+  "Durable Skill",
+  "High Growth Skill",
+  "High Value Skill",
+  "Declining Skill",
+] as const;
+
+export const CRITICALITY_LEVELS = [
+  "must_have",
+  "important",
+  "nice_to_have",
+  "contextual",
+] as const;
+
+export const VALIDATION_STATUSES = [
+  "draft",
+  "ai_enriched",
+  "human_verified",
+  "published",
+] as const;
+
+export const REVIEW_STATUSES = [
+  "pending",
+  "approved",
+  "needs_revision",
+  "rejected",
+] as const;
