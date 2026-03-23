@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     let rawResponse: string;
     try {
-      rawResponse = await invokeAgent(AGENT2_SYSTEM_PROMPT, userMessage);
+      rawResponse = await invokeAgent(AGENT2_SYSTEM_PROMPT, userMessage, 32000);
     } catch (agentError) {
       console.error("Agent 2 invocation failed:", agentError);
       return NextResponse.json(
@@ -52,11 +52,16 @@ export async function POST(request: NextRequest) {
     let profileData;
     try {
       profileData = parseAgentJSON(rawResponse);
-    } catch {
+    } catch (parseError) {
+      console.error("Agent 2 parse failed:", parseError);
+      console.error("Raw response length:", rawResponse.length);
+      console.error("Raw response (first 500 chars):", rawResponse.slice(0, 500));
       return NextResponse.json(
         {
           error: "Failed to parse Agent 2 response",
-          rawResponse,
+          details: String(parseError),
+          rawResponseLength: rawResponse.length,
+          rawResponsePreview: rawResponse.slice(0, 1000),
         },
         { status: 422 }
       );
