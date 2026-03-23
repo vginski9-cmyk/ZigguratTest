@@ -1,7 +1,16 @@
 import { execSync } from "child_process";
 
-const API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const MODEL = "claude-haiku-4-5-20251001";
+
+function getApiKey(): string {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    throw new Error(
+      "ANTHROPIC_API_KEY is not set. Check your .env.local file."
+    );
+  }
+  return key;
+}
 
 export async function invokeAgent(
   systemPrompt: string,
@@ -32,7 +41,7 @@ export async function invokeAgent(
   try {
     const result = execSync(
       `curl -s --max-time 480 https://api.anthropic.com/v1/messages ` +
-        `-H "x-api-key: ${API_KEY}" ` +
+        `-H "x-api-key: ${getApiKey()}" ` +
         `-H "anthropic-version: 2023-06-01" ` +
         `-H "content-type: application/json" ` +
         `-d @${tmpFile}`,
