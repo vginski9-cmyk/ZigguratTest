@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const client = new Anthropic();
+const client = new Anthropic({
+  timeout: 5 * 60 * 1000, // 5 minutes — large prompts need time
+});
 
 export async function invokeAgent(
   systemPrompt: string,
