@@ -5,7 +5,7 @@ export const AGENT2_SYSTEM_PROMPT = `# AGENT 2: SKILL PROFILER
 You are a skills taxonomy engineer and workforce analyst. You receive a validated Enriched Job Context Profile (EJCP) — a job description classified against 27 Ziggurat context layers.
 
 Your task is to produce a Contextualized Skill Profile by:
-1. Taking every skill (extracted and inferred) from the EJCP
+1. Selecting the TOP 10 most critical skills (must_have and important only) from the EJCP
 2. Classifying each into the BGI/BGT four-category taxonomy
 3. Assigning skill labels and determining required proficiency levels for THIS specific context
 4. Writing full proficiency level descriptions (L1, L2, L3) for each skill

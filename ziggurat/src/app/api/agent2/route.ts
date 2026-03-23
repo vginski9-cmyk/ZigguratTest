@@ -33,22 +33,41 @@ export async function POST(request: NextRequest) {
     }
 
     const ejcpData = JSON.parse(ejcp.data);
-    const userMessage = `Here is the validated EJCP. Produce a Contextualized Skill Profile.\n\nRules:\n- Output ONLY the JSON object. No markdown fences, no explanation before or after.\n- Limit to the TOP 10 most critical skills.\n- Ensure the JSON is complete and properly closed.\n\n${JSON.stringify(ejcpData, null, 2)}`;
 
     const MAX_ATTEMPTS = 2;
-    let rawResponse: string = "";
+    let rawText: string = "";
     let profileData: unknown = null;
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      try {
-        const msg =
-          attempt === 1
-            ? userMessage
-            : userMessage +
-              "\n\nIMPORTANT: Limit to TOP 8 skills. Keep descriptions SHORT (1-2 sentences). Output ONLY valid JSON, no markdown fences. Ensure the JSON is COMPLETE.";
+      const skillLimit = attempt === 1 ? 10 : 6;
+      const descLength = attempt === 1 ? "2-3 sentences" : "1-2 sentences";
 
-        rawResponse = await invokeAgent(AGENT2_SYSTEM_PROMPT, msg, 32000);
+      const userMessage = [
+        "Here is the validated EJCP. Produce a Contextualized Skill Profile.",
+        "",
+        "STRICT RULES:",
+        `- Include ONLY the TOP ${skillLimit} most critical skills (must_have and important).`,
+        `- Keep all proficiency descriptions to ${descLength}.`,
+        "- Keep brief sections to 2 short paragraphs each.",
+        "- Your response must be ONLY the JSON object. No markdown, no explanation.",
+        "",
+        JSON.stringify(ejcpData, null, 2),
+      ].join("\n");
+
+      try {
+        // Use assistant prefill to force raw JSON output (no markdown fences)
+        const result = await invokeAgent(
+          AGENT2_SYSTEM_PROMPT,
+          userMessage,
+          32000,
+          { prefill: '{\n  "meta":' }
+        );
+        rawText = result.text;
+
+        console.log(
+          `[Agent2] Attempt ${attempt}: ${rawText.length} chars, truncated=${result.truncated}`
+        );
       } catch (agentError) {
         console.error(`Agent 2 invocation failed (attempt ${attempt}):`, agentError);
         lastError = agentError;
@@ -56,12 +75,14 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        profileData = parseAgentJSON(rawResponse);
-        break; // success
+        profileData = parseAgentJSON(rawText);
+        console.log(`[Agent2] Parse succeeded on attempt ${attempt}`);
+        break;
       } catch (parseError) {
         console.error(`Agent 2 parse failed (attempt ${attempt}):`, parseError);
-        console.error("Raw response length:", rawResponse.length);
-        console.error("Raw response (first 500 chars):", rawResponse.slice(0, 500));
+        console.error("Raw response length:", rawText.length);
+        console.error("First 500 chars:", rawText.slice(0, 500));
+        console.error("Last 500 chars:", rawText.slice(-500));
         lastError = parseError;
       }
     }
@@ -71,8 +92,8 @@ export async function POST(request: NextRequest) {
         {
           error: "Failed to parse Agent 2 response after retries",
           details: String(lastError),
-          rawResponseLength: rawResponse.length,
-          rawResponsePreview: rawResponse.slice(0, 1000),
+          rawResponseLength: rawText.length,
+          rawResponsePreview: rawText.slice(0, 1000),
         },
         { status: 422 }
       );
