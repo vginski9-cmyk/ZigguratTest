@@ -25,52 +25,35 @@ export default function Gate1ReviewPage({
   const [reviewerId, setReviewerId] = useState("");
 
   useEffect(() => {
-    fetch(`/api/profiles/${id}`)
+    // Fetch EJCP directly by ID first (the ID from Agent 1 is an ejcp_versions ID)
+    fetch(`/api/ejcp/${id}`)
       .then((r) => {
-        if (!r.ok) {
-          // Try fetching as an EJCP directly
-          return fetch(`/api/profiles`).then((r2) => r2.json()).then(() => {
-            throw new Error("EJCP view - loading from ejcp_versions");
-          });
-        }
+        if (!r.ok) throw new Error("EJCP not found directly");
         return r.json();
       })
       .then((data) => {
         if (data.ejcp?.data) {
           setEjcpData(data.ejcp.data);
-        } else if (data.profile?.data?.ziggurat_context_summary) {
-          // We're looking at a profile, get its EJCP
-          setEjcpData(null);
         }
       })
       .catch(() => {
-        // Load EJCP data directly
-        loadEjcpDirectly();
+        // Fallback: try loading via profiles endpoint (in case ID is a profile ID)
+        fetch(`/api/profiles/${id}`)
+          .then((r) => {
+            if (!r.ok) throw new Error("Profile not found");
+            return r.json();
+          })
+          .then((data) => {
+            if (data.ejcp?.data) {
+              setEjcpData(data.ejcp.data);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to load EJCP data:", err);
+          });
       })
       .finally(() => setLoading(false));
   }, [id]);
-
-  async function loadEjcpDirectly() {
-    try {
-      const res = await fetch(`/api/profiles`);
-      const profiles = await res.json();
-      for (const p of profiles) {
-        if (p.ejcpId === id && p.ejcpData) {
-          setEjcpData(p.ejcpData);
-          return;
-        }
-      }
-      // If no match found, try loading from the profile data directly
-      for (const p of profiles) {
-        if (p.id === id && p.ejcpData) {
-          setEjcpData(p.ejcpData);
-          return;
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
 
   async function handleValidate() {
     if (!ejcpData) return;
