@@ -142,9 +142,11 @@ For each of the 27 Ziggurat layers:
 ## OUTPUT FORMAT
 Output valid JSON conforming to this schema. All 27 layers must be attempted. Do not skip layers — mark them as Unknown with confidence <50 if you cannot classify them.
 
+IMPORTANT: Do NOT include the full job description text in your output. Set source_jd_text to "[stored separately]" to save output space. Focus your token budget on rich narratives and accurate classifications.
+
 {
   "ziggurat_id": "<UUIDv5 or placeholder>",
-  "source_jd_text": "<full original JD text>",
+  "source_jd_text": "[stored separately]",
   "source_jd_hash": "<SHA-256 hash>",
   "source_url": null,
   "processing_agent": "Ziggurat_Classifier_v2",

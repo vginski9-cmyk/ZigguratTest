@@ -32,9 +32,11 @@ export async function POST(request: NextRequest) {
     const userMessage = `Please classify the following job description against all 27 Ziggurat layers. Include rich category narratives and per-layer narrative analysis. Output valid JSON only.\n\n---\n\n${jd.rawText}`;
 
     let rawText: string;
+    let truncated = false;
     try {
-      const result = await invokeAgent(AGENT1_SYSTEM_PROMPT, userMessage, 20000);
+      const result = await invokeAgent(AGENT1_SYSTEM_PROMPT, userMessage, 32000);
       rawText = result.text;
+      truncated = result.truncated;
     } catch (agentError) {
       console.error("Agent 1 invocation failed:", agentError);
       return NextResponse.json(
@@ -46,17 +48,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (truncated) {
+      console.warn(
+        `[Agent1] Response was truncated (${rawText.length} chars). Attempting JSON repair.`
+      );
+    }
+
     let ejcpData;
     try {
       ejcpData = parseAgentJSON(rawText);
     } catch {
-      return NextResponse.json(
-        {
-          error: "Failed to parse Agent 1 response",
-          rawResponse: rawText,
-        },
-        { status: 422 }
-      );
+      // If truncated, retry with a more concise prompt
+      if (truncated) {
+        console.warn("[Agent1] JSON repair failed on truncated response. Retrying with concise instructions.");
+        try {
+          const conciseMessage = `Classify this job description against the 27 Ziggurat layers. Keep narratives to 2-3 sentences each. Keep category analysis to 1 paragraph each. Output valid JSON only.\n\n---\n\n${jd.rawText}`;
+          const retryResult = await invokeAgent(AGENT1_SYSTEM_PROMPT, conciseMessage, 32000);
+          rawText = retryResult.text;
+          ejcpData = parseAgentJSON(rawText);
+        } catch (retryError) {
+          return NextResponse.json(
+            {
+              error: "Failed to parse Agent 1 response after retry",
+              details: String(retryError),
+              rawResponseLength: rawText.length,
+            },
+            { status: 422 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          {
+            error: "Failed to parse Agent 1 response",
+            rawResponse: rawText,
+          },
+          { status: 422 }
+        );
+      }
     }
 
     const ejcpId = uuidv4();
