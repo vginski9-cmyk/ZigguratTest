@@ -1,8 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { execSync } from "child_process";
 
-const client = new Anthropic({
-  timeout: 5 * 60 * 1000, // 5 minutes — large prompts need time
-});
+const API_KEY = process.env.ANTHROPIC_API_KEY || "";
+const MODEL = "claude-haiku-4-5-20251001";
 
 export async function invokeAgent(
   systemPrompt: string,
@@ -10,35 +9,63 @@ export async function invokeAgent(
   maxTokens: number = 16000,
   options?: { prefill?: string }
 ): Promise<{ text: string; truncated: boolean }> {
-  const messages: Anthropic.MessageParam[] = [
+  const messages: Array<{ role: string; content: string }> = [
     { role: "user", content: userMessage },
   ];
 
-  // Assistant prefill forces the model to continue from this text
-  // (avoids markdown fences, ensures JSON starts immediately)
   if (options?.prefill) {
     messages.push({ role: "assistant", content: options.prefill });
   }
 
-  const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+  const body = JSON.stringify({
+    model: MODEL,
     max_tokens: maxTokens,
     system: systemPrompt,
     messages,
   });
 
-  const truncated = response.stop_reason === "max_tokens";
-  if (truncated) {
-    console.warn(
-      `[invokeAgent] Response was truncated at ${maxTokens} tokens (${response.usage?.output_tokens} used).`
-    );
-  }
+  // Write body to a temp file to avoid shell escaping issues with large prompts
+  const tmpFile = `/tmp/anthropic-req-${Date.now()}.json`;
+  const { writeFileSync, unlinkSync } = await import("fs");
+  writeFileSync(tmpFile, body);
 
-  const textBlock = response.content.find(
-    (b): b is Anthropic.TextBlock => b.type === "text"
-  );
-  const text = (options?.prefill ?? "") + (textBlock?.text ?? "");
-  return { text, truncated };
+  try {
+    const result = execSync(
+      `curl -s --max-time 480 https://api.anthropic.com/v1/messages ` +
+        `-H "x-api-key: ${API_KEY}" ` +
+        `-H "anthropic-version: 2023-06-01" ` +
+        `-H "content-type: application/json" ` +
+        `-d @${tmpFile}`,
+      { maxBuffer: 50 * 1024 * 1024, timeout: 500000 }
+    );
+
+    const response = JSON.parse(result.toString());
+
+    if (response.type === "error") {
+      throw new Error(
+        `API error: ${response.error?.type} - ${response.error?.message}`
+      );
+    }
+
+    const truncated = response.stop_reason === "max_tokens";
+    if (truncated) {
+      console.warn(
+        `[invokeAgent] Response was truncated at ${maxTokens} tokens (${response.usage?.output_tokens} used).`
+      );
+    }
+
+    const textBlock = response.content?.find(
+      (b: { type: string }) => b.type === "text"
+    );
+    const text = (options?.prefill ?? "") + (textBlock?.text ?? "");
+    return { text, truncated };
+  } finally {
+    try {
+      unlinkSync(tmpFile);
+    } catch {
+      // ignore cleanup errors
+    }
+  }
 }
 
 /**
@@ -46,11 +73,10 @@ export async function invokeAgent(
  * and closing all open brackets/braces.
  */
 function repairTruncatedJSON(json: string): string {
-  // Walk character by character tracking structure
   let inString = false;
   let escape = false;
-  const stack: string[] = []; // track open { and [
-  let lastSafeEnd = 0; // last position after a complete value
+  const stack: string[] = [];
+  let lastSafeEnd = 0;
 
   for (let i = 0; i < json.length; i++) {
     const ch = json[i];
@@ -68,7 +94,6 @@ function repairTruncatedJSON(json: string): string {
     if (ch === '"') {
       inString = !inString;
       if (!inString) {
-        // Just closed a string — this is a safe point
         lastSafeEnd = i + 1;
       }
       continue;
@@ -85,9 +110,8 @@ function repairTruncatedJSON(json: string): string {
       stack.pop();
       lastSafeEnd = i + 1;
     } else if (ch === "," || ch === ":") {
-      // structural chars are fine
+      // structural chars
     } else if (/\d/.test(ch)) {
-      // number — find end of number
       let j = i;
       while (j < json.length && /[\d.eE+\-]/.test(json[j])) j++;
       lastSafeEnd = j;
@@ -104,13 +128,9 @@ function repairTruncatedJSON(json: string): string {
     }
   }
 
-  // Truncate to last safe position
   let repaired = json.slice(0, lastSafeEnd);
-
-  // Remove trailing commas
   repaired = repaired.replace(/,\s*$/, "");
 
-  // Re-count what's still open
   const remaining: string[] = [];
   inString = false;
   escape = false;
@@ -124,7 +144,6 @@ function repairTruncatedJSON(json: string): string {
     else if (ch === "}" || ch === "]") remaining.pop();
   }
 
-  // Close everything in reverse order
   while (remaining.length > 0) {
     const open = remaining.pop()!;
     repaired += open === "{" ? "}" : "]";
@@ -134,30 +153,26 @@ function repairTruncatedJSON(json: string): string {
 }
 
 export function parseAgentJSON(response: string): unknown {
-  // Strip markdown code fences
   let cleaned = response
     .replace(/```json\n?/g, "")
     .replace(/```\n?/g, "")
     .trim();
 
-  // Try direct parse first
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Fall through to extraction
+    // Fall through
   }
 
-  // Try to extract JSON object from surrounding text
   const jsonMatch = cleaned.match(/(\{[\s\S]*\})/);
   if (jsonMatch) {
     try {
       return JSON.parse(jsonMatch[1]);
     } catch {
-      // Fall through to repair
+      // Fall through
     }
   }
 
-  // Find the start of the JSON object and try to repair truncated response
   const objStart = cleaned.indexOf("{");
   if (objStart !== -1) {
     const fragment = cleaned.slice(objStart);

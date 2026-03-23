@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { invokeAgent, parseAgentJSON } from "@/lib/agents/invoke";
 import { AGENT1_SYSTEM_PROMPT } from "@/lib/agents/agent1-prompt";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     let rawText: string;
     try {
-      const result = await invokeAgent(AGENT1_SYSTEM_PROMPT, userMessage, 32000);
+      const result = await invokeAgent(AGENT1_SYSTEM_PROMPT, userMessage, 20000);
       rawText = result.text;
     } catch (agentError) {
       console.error("Agent 1 invocation failed:", agentError);
