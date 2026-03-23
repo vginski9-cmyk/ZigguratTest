@@ -1,5 +1,3 @@
-import { execSync } from "child_process";
-
 const MODEL = "claude-haiku-4-5-20251001";
 
 function getApiKey(): string {
@@ -26,55 +24,47 @@ export async function invokeAgent(
     messages.push({ role: "assistant", content: options.prefill });
   }
 
-  const body = JSON.stringify({
-    model: MODEL,
-    max_tokens: maxTokens,
-    system: systemPrompt,
-    messages,
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": getApiKey(),
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages,
+    }),
+    signal: AbortSignal.timeout(480000),
   });
 
-  // Write body to a temp file to avoid shell escaping issues with large prompts
-  const tmpFile = `/tmp/anthropic-req-${Date.now()}.json`;
-  const { writeFileSync, unlinkSync } = await import("fs");
-  writeFileSync(tmpFile, body);
-
-  try {
-    const result = execSync(
-      `curl -s --max-time 480 https://api.anthropic.com/v1/messages ` +
-        `-H "x-api-key: ${getApiKey()}" ` +
-        `-H "anthropic-version: 2023-06-01" ` +
-        `-H "content-type: application/json" ` +
-        `-d @${tmpFile}`,
-      { maxBuffer: 50 * 1024 * 1024, timeout: 500000 }
-    );
-
-    const response = JSON.parse(result.toString());
-
-    if (response.type === "error") {
-      throw new Error(
-        `API error: ${response.error?.type} - ${response.error?.message}`
-      );
-    }
-
-    const truncated = response.stop_reason === "max_tokens";
-    if (truncated) {
-      console.warn(
-        `[invokeAgent] Response was truncated at ${maxTokens} tokens (${response.usage?.output_tokens} used).`
-      );
-    }
-
-    const textBlock = response.content?.find(
-      (b: { type: string }) => b.type === "text"
-    );
-    const text = (options?.prefill ?? "") + (textBlock?.text ?? "");
-    return { text, truncated };
-  } finally {
-    try {
-      unlinkSync(tmpFile);
-    } catch {
-      // ignore cleanup errors
-    }
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Anthropic API returned ${res.status}: ${errorBody}`);
   }
+
+  const response = await res.json();
+
+  if (response.type === "error") {
+    throw new Error(
+      `API error: ${response.error?.type} - ${response.error?.message}`
+    );
+  }
+
+  const truncated = response.stop_reason === "max_tokens";
+  if (truncated) {
+    console.warn(
+      `[invokeAgent] Response was truncated at ${maxTokens} tokens (${response.usage?.output_tokens} used).`
+    );
+  }
+
+  const textBlock = response.content?.find(
+    (b: { type: string }) => b.type === "text"
+  );
+  const text = (options?.prefill ?? "") + (textBlock?.text ?? "");
+  return { text, truncated };
 }
 
 /**
