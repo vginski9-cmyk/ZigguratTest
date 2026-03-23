@@ -40,17 +40,19 @@ export async function POST(request: NextRequest) {
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const skillTarget = attempt === 1 ? "8-12" : "6-8";
-      const descLength = attempt === 1 ? "2-4 sentences" : "2-3 sentences";
+      const skillTarget = attempt === 1 ? "15-25" : "12-18";
+      const descLength = attempt === 1 ? "2-3 sentences" : "1-2 sentences";
 
       const userMessage = [
         "Here is the validated EJCP. Produce a Contextualized Skill Profile following the full Occupation Skills Taxonomy.",
         "",
         "STRICT RULES:",
-        `- Target ${skillTarget} total skills distributed across all four taxonomy categories.`,
-        "- You MUST have 2-7 Core Role-Specific Skills. Include Baseline Applied, Foundational & Leadership, and Specialization as warranted.",
-        "- Apply the Category Decision Rules (T1-T4) for every skill classification.",
-        `- Keep all proficiency descriptions to ${descLength}.`,
+        `- Target ${skillTarget} ATOMIC skills (1-4 words each) distributed across ALL FOUR taxonomy categories.`,
+        "- Distribution: 5-7 Core Role-Specific, 2-4 Baseline Applied, 3-5 Foundational & Leadership, 4-8 Specialization.",
+        "- NEVER combine two skills into one name (e.g., 'Python Data Engineering' → separate 'Python' + 'Data Engineering').",
+        "- Apply Category Decision Rules (T1-T4) for every skill.",
+        "- VARY required_level (mix of L1, L2, L3). VARY criticality (mix of must_have, important, nice_to_have).",
+        `- Keep proficiency descriptions to ${descLength}. Keep ability fields to 1-2 sentences.`,
         "- Every definition starts with the skill name. Every how_utilized starts with the role title.",
         '- Every proficiency level starts with "At Level [N] Proficiency, a worker can..."',
         "- Keep brief sections to 2-3 short paragraphs each.",
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
         const result = await invokeAgent(
           AGENT2_SYSTEM_PROMPT,
           userMessage,
-          32000,
+          64000,
           { prefill: '{\n  "meta":' }
         );
         rawText = result.text;
