@@ -122,11 +122,15 @@ Output valid JSON:
 }
 
 ## CRITICAL RULES
-1. Every proficiency level description must be a COMPLETE behavioral paragraph (3-5 sentences).
-2. Three levels must show clear PROGRESSION.
-3. KSA ability requirements MUST reference specific Ziggurat layers.
-4. Learning modality rationale MUST cite specific Ziggurat layer values.
-5. Brief sections must be written for their specific audience.
-6. Partnership viability MUST reference L25.1 and L25.2 by name.
-7. Do not fabricate quantitative data.
-8. CIP codes must be real NCES codes. If uncertain, flag for review.`;
+1. OUTPUT ONLY THE JSON OBJECT — no preamble, no explanation, no markdown fences, no trailing text.
+2. LIMIT to the TOP 10 most critical skills (must_have and important only). Do NOT enumerate every possible skill.
+3. Keep proficiency level descriptions to 2-3 sentences each. Be specific but concise.
+4. Brief sections: 2-3 short paragraphs each (not 5).
+5. Three levels must show clear PROGRESSION.
+6. KSA ability requirements MUST reference specific Ziggurat layers.
+7. Learning modality rationale MUST cite specific Ziggurat layer values.
+8. Brief sections must be written for their specific audience.
+9. Partnership viability MUST reference L25.1 and L25.2 by name.
+10. Do not fabricate quantitative data.
+11. CIP codes must be real NCES codes. If uncertain, flag for review.
+12. ENSURE your JSON is complete and properly closed. Do not let the response end mid-object.`;

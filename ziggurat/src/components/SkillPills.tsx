@@ -152,9 +152,9 @@ export function InferredSkillPills({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {skills.map((s) => (
+      {skills.map((s, i) => (
         <span
-          key={s.skill}
+          key={`${s.skill}-${i}`}
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-purple-50 text-purple-700 border border-purple-300"
         >
           {s.skill}

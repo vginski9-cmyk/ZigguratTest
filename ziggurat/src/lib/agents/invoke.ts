@@ -28,6 +28,66 @@ export async function invokeAgent(
   return textBlock?.text ?? "";
 }
 
+/**
+ * Attempt to repair truncated JSON by closing unclosed brackets/braces
+ * and removing trailing commas.
+ */
+function repairTruncatedJSON(json: string): string {
+  // Remove trailing commas before } or ]
+  let repaired = json.replace(/,\s*([}\]])/g, "$1");
+
+  // Remove any trailing incomplete key-value (e.g. `"key": ` or `"key":`)
+  repaired = repaired.replace(/,?\s*"[^"]*"\s*:\s*$/, "");
+  // Remove trailing incomplete string value (e.g. `"key": "some text that got cut`)
+  repaired = repaired.replace(/,?\s*"[^"]*"\s*:\s*"[^"]*$/, "");
+
+  // Count unclosed braces and brackets
+  let braces = 0;
+  let brackets = 0;
+  let inString = false;
+  let escape = false;
+
+  for (const ch of repaired) {
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") braces++;
+    if (ch === "}") braces--;
+    if (ch === "[") brackets++;
+    if (ch === "]") brackets--;
+  }
+
+  // If we're inside a string, close it
+  if (inString) {
+    repaired += '"';
+  }
+
+  // Close unclosed brackets then braces
+  while (brackets > 0) {
+    repaired += "]";
+    brackets--;
+  }
+  while (braces > 0) {
+    repaired += "}";
+    braces--;
+  }
+
+  // Clean up trailing commas one more time after repairs
+  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+  return repaired;
+}
+
 export function parseAgentJSON(response: string): unknown {
   // Strip markdown code fences
   let cleaned = response
@@ -47,6 +107,18 @@ export function parseAgentJSON(response: string): unknown {
   if (jsonMatch) {
     try {
       return JSON.parse(jsonMatch[1]);
+    } catch {
+      // Fall through to repair
+    }
+  }
+
+  // Find the start of the JSON object and try to repair truncated response
+  const objStart = cleaned.indexOf("{");
+  if (objStart !== -1) {
+    const fragment = cleaned.slice(objStart);
+    const repaired = repairTruncatedJSON(fragment);
+    try {
+      return JSON.parse(repaired);
     } catch {
       // Fall through
     }
