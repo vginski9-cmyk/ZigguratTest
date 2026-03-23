@@ -4,7 +4,15 @@ export interface LayerClassification {
   confidence: number;
   provenance: "extracted" | "inferred" | "unknown";
   evidence: string;
+  narrative: string;
   [key: string]: unknown;
+}
+
+export interface CategoryNarrative {
+  category: number;
+  title: string;
+  summary: string;
+  analysis: string;
 }
 
 export interface EJCPData {
@@ -15,6 +23,7 @@ export interface EJCPData {
   processing_agent: string;
   processing_timestamp: string;
   validation_status: string;
+  category_narratives: CategoryNarrative[];
   layers: Record<string, LayerClassification>;
   extracted_skills_raw: string[];
   inferred_skills: InferredSkill[];

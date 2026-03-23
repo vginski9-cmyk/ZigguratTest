@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       version: 1,
       data: JSON.stringify(profileData),
       validationStatus: "ai_enriched",
-      agentVersion: "Skill_Profiler_v1",
+      agentVersion: "Skill_Profiler_v2",
       createdAt: now,
     });
 

@@ -8,7 +8,7 @@ import {
   InferredSkillPills,
 } from "@/components/SkillPills";
 import { ReviewControls } from "@/components/ReviewControls";
-import type { EJCPData } from "@/lib/ziggurat/types";
+import type { EJCPData, CategoryNarrative } from "@/lib/ziggurat/types";
 
 export default function Gate1ReviewPage({
   params,
@@ -202,6 +202,20 @@ export default function Gate1ReviewPage({
         </div>
       )}
 
+      {/* Enrichment Notes (top-level analysis summary) */}
+      {ejcpData.enrichment_notes && (
+        <div className="bg-[#f0f4f8] rounded-xl border border-[#d0dae8] p-6 mb-6">
+          <h2 className="text-lg font-semibold text-[#1B2A4A] mb-3">
+            Analysis Summary
+          </h2>
+          <div className="text-sm text-slate-700 leading-relaxed space-y-2">
+            {ejcpData.enrichment_notes.split("\n\n").map((para: string, i: number) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Ziggurat Context Panel */}
       <div className="bg-white rounded-xl border p-6 mb-6">
         <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">
@@ -209,9 +223,13 @@ export default function Gate1ReviewPage({
         </h2>
         <ZigguratContextPanel
           layers={layers as Record<string, { value?: string; values?: string[]; confidence: number; provenance: string; evidence: string }>}
+          categoryNarratives={ejcpData.category_narratives || []}
           editable={true}
           onChange={(updatedLayers) =>
             setEjcpData({ ...ejcpData, layers: updatedLayers as EJCPData["layers"] })
+          }
+          onNarrativeChange={(narratives: CategoryNarrative[]) =>
+            setEjcpData({ ...ejcpData, category_narratives: narratives })
           }
         />
       </div>

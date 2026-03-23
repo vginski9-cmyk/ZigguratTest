@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userMessage = `Please classify the following job description against all 27 Ziggurat layers. Output valid JSON only.\n\n---\n\n${jd.rawText}`;
+    const userMessage = `Please classify the following job description against all 27 Ziggurat layers. Include rich category narratives and per-layer narrative analysis. Output valid JSON only.\n\n---\n\n${jd.rawText}`;
 
     let rawText: string;
     try {
-      const result = await invokeAgent(AGENT1_SYSTEM_PROMPT, userMessage);
+      const result = await invokeAgent(AGENT1_SYSTEM_PROMPT, userMessage, 32000);
       rawText = result.text;
     } catch (agentError) {
       console.error("Agent 1 invocation failed:", agentError);
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       version: 1,
       data: JSON.stringify(ejcpData),
       validationStatus: "ai_enriched",
-      agentVersion: "Ziggurat_Classifier_v1",
+      agentVersion: "Ziggurat_Classifier_v2",
       createdAt: now,
     });
 
