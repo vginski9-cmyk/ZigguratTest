@@ -7,6 +7,7 @@ interface SkillPillsProps {
   selectedId?: string;
   onSelect: (skillId: string) => void;
   groupByCategory?: boolean;
+  onRemove?: (skillId: string) => void;
 }
 
 const categoryColors: Record<string, string> = {
@@ -29,6 +30,7 @@ export function SkillPills({
   selectedId,
   onSelect,
   groupByCategory = true,
+  onRemove,
 }: SkillPillsProps) {
   if (!groupByCategory) {
     return (
@@ -39,6 +41,7 @@ export function SkillPills({
             skill={skill}
             isSelected={selectedId === skill.skill_id}
             onClick={() => onSelect(skill.skill_id)}
+            onRemove={onRemove ? () => onRemove(skill.skill_id) : undefined}
           />
         ))}
       </div>
@@ -69,6 +72,7 @@ export function SkillPills({
                 skill={skill}
                 isSelected={selectedId === skill.skill_id}
                 onClick={() => onSelect(skill.skill_id)}
+                onRemove={onRemove ? () => onRemove(skill.skill_id) : undefined}
               />
             ))}
           </div>
@@ -82,10 +86,12 @@ function SkillPill({
   skill,
   isSelected,
   onClick,
+  onRemove,
 }: {
   skill: SkillEntry;
   isSelected: boolean;
   onClick: () => void;
+  onRemove?: () => void;
 }) {
   const catColor =
     categoryColors[skill.bgt_category] ||
@@ -94,22 +100,40 @@ function SkillPill({
     criticalityBadge[skill.criticality] || "bg-slate-300 text-slate-700";
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${
-        isSelected
-          ? "bg-[#1B2A4A] text-white border-[#1B2A4A] shadow-md"
-          : `${catColor} hover:shadow-sm`
-      }`}
-    >
-      <span>{skill.skill_name}</span>
-      <span
-        className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-white" : critColor}`}
+    <span className="inline-flex items-center">
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border transition-all ${
+          onRemove ? "rounded-l-full" : "rounded-full"
+        } ${
+          isSelected
+            ? "bg-[#1B2A4A] text-white border-[#1B2A4A] shadow-md"
+            : `${catColor} hover:shadow-sm`
+        }`}
       >
-        L{skill.required_level}
-      </span>
-    </button>
+        <span>{skill.skill_name}</span>
+        <span
+          className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-white" : critColor}`}
+        >
+          L{skill.required_level}
+        </span>
+      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className={`px-1.5 py-1.5 text-sm border border-l-0 rounded-r-full transition-colors ${
+            isSelected
+              ? "bg-[#1B2A4A] text-red-300 border-[#1B2A4A] hover:text-red-100"
+              : "bg-white text-red-400 border-slate-300 hover:text-red-600 hover:bg-red-50"
+          }`}
+          title="Remove skill"
+        >
+          &times;
+        </button>
+      )}
+    </span>
   );
 }
 

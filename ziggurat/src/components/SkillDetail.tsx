@@ -247,21 +247,67 @@ export function SkillDetail({
         <h5 className="text-sm font-semibold text-slate-700 mb-3">
           Preferred Learning Modalities
         </h5>
-        <div className="space-y-2">
-          {(skill.learning_modes || [])
-            .sort((a, b) => a.rank - b.rank)
-            .map((mode, i) => (
-              <div key={i} className="flex gap-3 items-start">
-                <span className="text-xs font-bold bg-slate-200 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {mode.rank}
-                </span>
-                <div>
-                  <span className="text-sm font-medium">{mode.mode}</span>
-                  <p className="text-xs text-slate-500">{mode.why}</p>
+        {editable ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((rank) => {
+              const existing = (skill.learning_modes || []).find((m) => m.rank === rank);
+              return (
+                <div key={rank} className="flex gap-3 items-start">
+                  <span className="text-xs font-bold bg-slate-200 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-1">
+                    {rank}
+                  </span>
+                  <div className="flex-1 space-y-1">
+                    <select
+                      value={existing?.mode || ""}
+                      onChange={(e) => {
+                        const modes = [...(skill.learning_modes || [])];
+                        const idx = modes.findIndex((m) => m.rank === rank);
+                        if (idx >= 0) modes[idx] = { ...modes[idx], mode: e.target.value };
+                        else modes.push({ rank, mode: e.target.value, why: "" });
+                        updateField("learning_modes", modes);
+                      }}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    >
+                      <option value="">Select mode...</option>
+                      {["Classroom", "Online / E-Learning", "On-the-Job Training", "Simulation", "Self-Directed Study", "Mentorship / Coaching", "Lab / Workshop", "Clinical / Practicum", "Fieldwork"].map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={existing?.why || ""}
+                      onChange={(e) => {
+                        const modes = [...(skill.learning_modes || [])];
+                        const idx = modes.findIndex((m) => m.rank === rank);
+                        if (idx >= 0) modes[idx] = { ...modes[idx], why: e.target.value };
+                        else modes.push({ rank, mode: "", why: e.target.value });
+                        updateField("learning_modes", modes);
+                      }}
+                      placeholder="Rationale..."
+                      className="w-full border rounded px-2 py-1 text-xs"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(skill.learning_modes || [])
+              .sort((a, b) => a.rank - b.rank)
+              .map((mode, i) => (
+                <div key={i} className="flex gap-3 items-start">
+                  <span className="text-xs font-bold bg-slate-200 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {mode.rank}
+                  </span>
+                  <div>
+                    <span className="text-sm font-medium">{mode.mode}</span>
+                    <p className="text-xs text-slate-500">{mode.why}</p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* Education Mapping */}

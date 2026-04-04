@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useCallback, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { SkillPills } from "@/components/SkillPills";
 import { SkillDetail } from "@/components/SkillDetail";
@@ -8,6 +8,43 @@ import { ProfileBrief } from "@/components/ProfileBrief";
 import { ReviewControls } from "@/components/ReviewControls";
 import { ZigguratContextPanel } from "@/components/ZigguratContextPanel";
 import type { SkillProfileData, SkillEntry } from "@/lib/ziggurat/types";
+
+function newBlankSkill(): SkillEntry {
+  const id = crypto.randomUUID();
+  return {
+    skill_id: id,
+    skill_name: "New Skill",
+    bgt_category: "Core Role-Specific Skills",
+    label: "Durable Skill",
+    criticality: "important",
+    required_level: 2,
+    definition: "",
+    how_utilized: "",
+    proficiency_L1: "",
+    proficiency_L2: "",
+    proficiency_L3: "",
+    knowledge_domain: "",
+    knowledge_level: "",
+    equivalent_coursework: "",
+    assessment_indicator: "",
+    abilities_cognitive: "",
+    abilities_communication: "",
+    abilities_dispositional: "",
+    learning_modes: [],
+    cip_primary: "",
+    cip_secondary: [],
+    credential_level: "",
+    credit_hours: "",
+    experiential_hours: "",
+    assessment_type: "",
+    bloom_target: "",
+    program_fit: [],
+    refresh_cadence: "",
+    partnership: { rating: "moderate", text: "" },
+    adjustment_rationale: "",
+    source_evidence: [],
+  };
+}
 
 export default function Gate2ReviewPage({
   params,
@@ -30,23 +67,68 @@ export default function Gate2ReviewPage({
   const [error, setError] = useState("");
   const [reviewerId, setReviewerId] = useState("");
   const [showContext, setShowContext] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<"saved" | "unsaved" | "saving" | "">("");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-save draft
+  const saveDraft = useCallback(async () => {
+    if (!profileData) return;
+    setDraftStatus("saving");
+    try {
+      await fetch("/api/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: id, data: profileData, skillReviews }),
+      });
+      setDraftStatus("saved");
+    } catch {
+      setDraftStatus("unsaved");
+    }
+  }, [id, profileData, skillReviews]);
+
+  // Trigger auto-save on changes (debounced 5s)
+  useEffect(() => {
+    if (!profileData || loading) return;
+    setDraftStatus("unsaved");
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => saveDraft(), 5000);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [profileData, skillReviews, saveDraft, loading]);
 
   useEffect(() => {
-    fetch(`/api/profiles/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.profile?.data) {
+    async function loadData() {
+      try {
+        // Try loading draft first
+        const draftRes = await fetch(`/api/drafts?profileId=${id}`);
+        const draft = draftRes.ok ? await draftRes.json() : null;
+
+        const profileRes = await fetch(`/api/profiles/${id}`);
+        const data = await profileRes.json();
+
+        if (draft?.data) {
+          setProfileData(draft.data);
+          setSkillReviews(draft.skillReviews || {});
+          setDraftStatus("saved");
+        } else if (data.profile?.data) {
           setProfileData(data.profile.data);
-          if (data.profile.data.skills?.length > 0) {
-            setSelectedSkill(data.profile.data.skills[0].skill_id);
-          }
         }
+
+        if (!draft?.data && data.profile?.data?.skills?.length > 0) {
+          setSelectedSkill(data.profile.data.skills[0].skill_id);
+        } else if (draft?.data?.skills?.length > 0) {
+          setSelectedSkill(draft.data.skills[0].skill_id);
+        }
+
         if (data.ejcp?.data?.layers) {
           setEjcpLayers(data.ejcp.data.layers);
         }
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, [id]);
 
   function updateSkill(updated: SkillEntry) {
@@ -57,6 +139,39 @@ export default function Gate2ReviewPage({
         s.skill_id === updated.skill_id ? updated : s
       ),
     });
+  }
+
+  function addSkill() {
+    if (!profileData) return;
+    const skill = newBlankSkill();
+    setProfileData({
+      ...profileData,
+      skills: [...profileData.skills, skill],
+    });
+    setSelectedSkill(skill.skill_id);
+  }
+
+  function removeSkill(skillId: string) {
+    if (!profileData) return;
+    const updated = profileData.skills.filter((s) => s.skill_id !== skillId);
+    setProfileData({ ...profileData, skills: updated });
+    if (selectedSkill === skillId && updated.length > 0) {
+      setSelectedSkill(updated[0].skill_id);
+    }
+    const newReviews = { ...skillReviews };
+    delete newReviews[skillId];
+    setSkillReviews(newReviews);
+  }
+
+  function bulkApprove(filter?: "must_have") {
+    if (!profileData) return;
+    const newReviews = { ...skillReviews };
+    for (const skill of profileData.skills) {
+      if (!filter || skill.criticality === filter) {
+        newReviews[skill.skill_id] = { status: "approved", notes: newReviews[skill.skill_id]?.notes || "" };
+      }
+    }
+    setSkillReviews(newReviews);
   }
 
   async function handlePublish() {
@@ -153,8 +268,8 @@ export default function Gate2ReviewPage({
         </p>
       </div>
 
-      {/* Reviewer ID */}
-      <div className="mb-6">
+      {/* Reviewer ID + Draft status */}
+      <div className="mb-6 flex items-center gap-4">
         <input
           type="text"
           value={reviewerId}
@@ -162,6 +277,15 @@ export default function Gate2ReviewPage({
           placeholder="Reviewer ID"
           className="border rounded-lg px-4 py-2 text-sm w-64"
         />
+        {draftStatus === "saved" && (
+          <span className="text-xs text-green-600">Draft saved</span>
+        )}
+        {draftStatus === "unsaved" && (
+          <span className="text-xs text-amber-600">Unsaved changes</span>
+        )}
+        {draftStatus === "saving" && (
+          <span className="text-xs text-slate-400">Saving...</span>
+        )}
       </div>
 
       {/* Ziggurat Context Summary (collapsible) */}
@@ -212,7 +336,41 @@ export default function Gate2ReviewPage({
       </div>
 
       {activeTab === "skills" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div>
+          {/* Bulk Actions Toolbar */}
+          <div className="flex flex-wrap gap-2 mb-4 p-3 bg-slate-50 rounded-lg border">
+            <button
+              type="button"
+              onClick={() => bulkApprove()}
+              className="px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 border border-green-300 rounded-md hover:bg-green-100"
+            >
+              Approve All
+            </button>
+            <button
+              type="button"
+              onClick={() => bulkApprove("must_have")}
+              className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-300 rounded-md hover:bg-blue-100"
+            >
+              Approve Must-Have
+            </button>
+            <div className="border-l mx-1" />
+            <button
+              type="button"
+              onClick={addSkill}
+              className="px-3 py-1.5 text-xs font-medium bg-[#1B2A4A] text-white rounded-md hover:bg-[#2a3d5e]"
+            >
+              + Add Skill
+            </button>
+            <button
+              type="button"
+              onClick={() => saveDraft()}
+              className="px-3 py-1.5 text-xs font-medium bg-white text-slate-600 border rounded-md hover:bg-slate-50 ml-auto"
+            >
+              Save Draft
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Skill list */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl border p-4 sticky top-4">
@@ -221,6 +379,7 @@ export default function Gate2ReviewPage({
                 selectedId={selectedSkill}
                 onSelect={setSelectedSkill}
                 groupByCategory={true}
+                onRemove={removeSkill}
               />
             </div>
           </div>
@@ -251,6 +410,7 @@ export default function Gate2ReviewPage({
               </div>
             )}
           </div>
+        </div>
         </div>
       )}
 

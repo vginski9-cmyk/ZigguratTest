@@ -11,6 +11,8 @@ export default function SubmitPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [step, setStep] = useState(0); // 0=idle, 1=saving, 2=agent1, 3=done
+  const [elapsed, setElapsed] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,7 +20,10 @@ export default function SubmitPage() {
 
     setLoading(true);
     setError("");
+    setStep(1);
+    setElapsed(0);
     setStatus("Saving job description...");
+    const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
 
     try {
       // Step 1: Submit the JD
@@ -35,9 +40,8 @@ export default function SubmitPage() {
       const { id: jdId } = await submitRes.json();
 
       // Step 2: Invoke Agent 1
-      setStatus(
-        "Running Ziggurat Classifier (Agent 1)... This takes 30-60 seconds."
-      );
+      setStep(2);
+      setStatus("Classifying against 27 Ziggurat layers (Agent 1)...");
       const agent1Res = await fetch("/api/agent1", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,13 +57,17 @@ export default function SubmitPage() {
 
       const { ejcpId } = await agent1Res.json();
 
+      setStep(3);
+      clearInterval(timer);
       setStatus("Classification complete! Redirecting to review...");
       router.push(`/review/gate1/${ejcpId}`);
     } catch (err) {
+      clearInterval(timer);
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred"
       );
       setLoading(false);
+      setStep(0);
       setStatus("");
     }
   }
@@ -136,31 +144,33 @@ export default function SubmitPage() {
           </div>
         )}
 
-        {status && (
+        {step > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              {loading && (
-                <svg
-                  className="animate-spin h-5 w-5 text-blue-600"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+            <div className="space-y-3">
+              {[
+                { n: 1, label: "Saving job description" },
+                { n: 2, label: "Classifying with Agent 1" },
+                { n: 3, label: "Complete" },
+              ].map(({ n, label }) => (
+                <div key={n} className="flex items-center gap-3">
+                  {step > n ? (
+                    <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">&#10003;</span>
+                  ) : step === n ? (
+                    <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center text-xs">{n}</span>
+                  )}
+                  <span className={`text-sm ${step >= n ? "text-blue-700 font-medium" : "text-slate-400"}`}>
+                    {label}
+                  </span>
+                </div>
+              ))}
+              {step > 0 && step < 3 && (
+                <p className="text-xs text-slate-500 pl-9">Elapsed: {elapsed}s</p>
               )}
-              <span className="text-sm text-blue-700">{status}</span>
             </div>
           </div>
         )}

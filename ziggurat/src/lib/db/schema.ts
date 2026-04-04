@@ -72,3 +72,37 @@ export const reviewQueue = sqliteTable("review_queue", {
   createdAt: text("created_at").notNull(),
   completedAt: text("completed_at"),
 });
+
+export const reviewDrafts = sqliteTable("review_drafts", {
+  id: text("id").primaryKey(),
+  profileId: text("profile_id").notNull(),
+  data: text("data").notNull(), // JSON
+  skillReviews: text("skill_reviews").notNull(), // JSON
+  savedAt: text("saved_at").notNull(),
+});
+
+export const batchJobs = sqliteTable("batch_jobs", {
+  id: text("id").primaryKey(),
+  status: text("status").notNull().default("pending"), // pending | processing | completed | failed
+  totalCount: integer("total_count").notNull(),
+  completedCount: integer("completed_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  mode: text("mode").notNull().default("auto"), // auto | reviewed
+  createdBy: text("created_by"),
+  createdAt: text("created_at").notNull(),
+  completedAt: text("completed_at"),
+});
+
+export const batchItems = sqliteTable("batch_items", {
+  id: text("id").primaryKey(),
+  batchId: text("batch_id")
+    .notNull()
+    .references(() => batchJobs.id),
+  jdId: text("jd_id"),
+  ejcpId: text("ejcp_id"),
+  profileId: text("profile_id"),
+  status: text("status").notNull().default("pending"), // pending | agent1 | agent2 | completed | failed
+  error: text("error"),
+  createdAt: text("created_at").notNull(),
+  completedAt: text("completed_at"),
+});

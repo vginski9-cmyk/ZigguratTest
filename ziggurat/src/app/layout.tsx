@@ -40,6 +40,12 @@ export default function RootLayout({
                   Submit JD
                 </Link>
                 <Link
+                  href="/submit-bulk"
+                  className="text-sm text-slate-300 hover:text-white transition-colors"
+                >
+                  Bulk Submit
+                </Link>
+                <Link
                   href="/review"
                   className="text-sm text-slate-300 hover:text-white transition-colors"
                 >

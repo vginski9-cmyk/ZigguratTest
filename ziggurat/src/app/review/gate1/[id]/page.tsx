@@ -23,6 +23,8 @@ export default function Gate1ReviewPage({
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [reviewerId, setReviewerId] = useState("");
+  const [validateStep, setValidateStep] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     // Fetch EJCP directly by ID first (the ID from Agent 1 is an ejcp_versions ID)
@@ -60,7 +62,10 @@ export default function Gate1ReviewPage({
 
     setSubmitting(true);
     setError("");
+    setValidateStep(1);
+    setElapsed(0);
     setStatus("Saving validated EJCP...");
+    const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
 
     try {
       // Validate EJCP
@@ -81,9 +86,8 @@ export default function Gate1ReviewPage({
       const { newId } = await validateRes.json();
 
       // Invoke Agent 2
-      setStatus(
-        "Running Skill Profiler (Agent 2)... This takes 60-120 seconds."
-      );
+      setValidateStep(2);
+      setStatus("Generating skill profile (Agent 2)...");
       const agent2Res = await fetch("/api/agent2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,13 +101,17 @@ export default function Gate1ReviewPage({
 
       const { profileId } = await agent2Res.json();
 
+      setValidateStep(3);
+      clearInterval(timer);
       setStatus("Skill profile generated! Redirecting...");
       router.push(`/review/gate2/${profileId}`);
     } catch (err) {
+      clearInterval(timer);
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred"
       );
       setSubmitting(false);
+      setValidateStep(0);
       setStatus("");
     }
   }
@@ -330,31 +338,33 @@ export default function Gate1ReviewPage({
           {error}
         </div>
       )}
-      {status && (
+      {validateStep > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-3">
-            {submitting && (
-              <svg
-                className="animate-spin h-5 w-5 text-blue-600"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
+          <div className="space-y-3">
+            {[
+              { n: 1, label: "Saving validated EJCP" },
+              { n: 2, label: "Generating skill profile (Agent 2)" },
+              { n: 3, label: "Complete" },
+            ].map(({ n, label }) => (
+              <div key={n} className="flex items-center gap-3">
+                {validateStep > n ? (
+                  <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">&#10003;</span>
+                ) : validateStep === n ? (
+                  <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center text-xs">{n}</span>
+                )}
+                <span className={`text-sm ${validateStep >= n ? "text-blue-700 font-medium" : "text-slate-400"}`}>
+                  {label}
+                </span>
+              </div>
+            ))}
+            {validateStep > 0 && validateStep < 3 && (
+              <p className="text-xs text-slate-500 pl-9">Elapsed: {elapsed}s</p>
             )}
-            <span className="text-sm text-blue-700">{status}</span>
           </div>
         </div>
       )}

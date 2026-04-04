@@ -8,6 +8,78 @@ import { AGENT2_SYSTEM_PROMPT } from "@/lib/agents/agent2-prompt";
 
 export const maxDuration = 300;
 
+// Analyze EJCP complexity to determine dynamic skill targets
+function computeComplexity(ejcpData: Record<string, unknown>): {
+  level: "simple" | "moderate" | "complex";
+  totalTarget: string;
+  coreTarget: string;
+  baselineTarget: string;
+  foundationalTarget: string;
+  specializationTarget: string;
+  maxTokens: number;
+} {
+  const layers = (ejcpData.layers || {}) as Record<string, { value?: string; values?: string[]; confidence?: number }>;
+  let activeLayers = 0;
+  let seniorityScore = 0;
+  let specializationDensity = 0;
+
+  for (const [key, layer] of Object.entries(layers)) {
+    if (!layer) continue;
+    const hasValue = layer.value && layer.value !== "" && layer.value !== "unknown";
+    const hasValues = Array.isArray(layer.values) && layer.values.length > 0;
+    if (hasValue || hasValues) activeLayers++;
+
+    // Seniority indicators
+    if (key === "L7" && layer.value) {
+      const senior = ["senior", "principal", "staff", "director", "executive", "lead"];
+      if (senior.some((s) => (layer.value || "").toLowerCase().includes(s))) seniorityScore += 2;
+      else seniorityScore += 1;
+    }
+    if (key === "L8" && layer.value) {
+      const highAutonomy = ["high", "autonomous", "strategic"];
+      if (highAutonomy.some((s) => (layer.value || "").toLowerCase().includes(s))) seniorityScore += 2;
+    }
+
+    // Specialization layers (L22-L27 range)
+    const layerNum = parseInt(key.replace(/\D/g, ""), 10);
+    if (layerNum >= 22 && (hasValue || hasValues)) specializationDensity++;
+  }
+
+  const complexityScore = activeLayers + seniorityScore + specializationDensity * 2;
+
+  if (complexityScore >= 22) {
+    return {
+      level: "complex",
+      totalTarget: "25-35",
+      coreTarget: "7-10",
+      baselineTarget: "3-5",
+      foundationalTarget: "4-6",
+      specializationTarget: "8-14",
+      maxTokens: 64000,
+    };
+  } else if (complexityScore >= 14) {
+    return {
+      level: "moderate",
+      totalTarget: "20-28",
+      coreTarget: "6-8",
+      baselineTarget: "3-5",
+      foundationalTarget: "3-5",
+      specializationTarget: "5-10",
+      maxTokens: 64000,
+    };
+  } else {
+    return {
+      level: "simple",
+      totalTarget: "15-20",
+      coreTarget: "5-7",
+      baselineTarget: "2-4",
+      foundationalTarget: "3-5",
+      specializationTarget: "4-6",
+      maxTokens: 32000,
+    };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { ejcpId } = await request.json();
@@ -33,6 +105,8 @@ export async function POST(request: NextRequest) {
     }
 
     const ejcpData = JSON.parse(ejcp.data);
+    const complexity = computeComplexity(ejcpData);
+    console.log(`[Agent2] EJCP complexity: ${complexity.level}, target: ${complexity.totalTarget} skills`);
 
     const MAX_ATTEMPTS = 2;
     let rawText: string = "";
@@ -40,15 +114,22 @@ export async function POST(request: NextRequest) {
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const skillTarget = attempt === 1 ? "15-25" : "12-18";
+      // First attempt uses dynamic targets; fallback reduces by ~30%
+      const skillTarget = attempt === 1 ? complexity.totalTarget : (() => {
+        const [lo, hi] = complexity.totalTarget.split("-").map(Number);
+        return `${Math.max(12, Math.floor(lo * 0.7))}-${Math.floor(hi * 0.7)}`;
+      })();
       const descLength = attempt === 1 ? "2-3 sentences" : "1-2 sentences";
+      const tokenBudget = attempt === 1 ? complexity.maxTokens : Math.min(complexity.maxTokens, 48000);
 
       const userMessage = [
         "Here is the validated EJCP. Produce a Contextualized Skill Profile following the full Occupation Skills Taxonomy.",
         "",
+        `COMPLEXITY ASSESSMENT: This role is "${complexity.level}" complexity. You MUST produce the full number of skills.`,
+        "",
         "STRICT RULES:",
         `- Target ${skillTarget} ATOMIC skills (1-4 words each) distributed across ALL FOUR taxonomy categories.`,
-        "- Distribution: 5-7 Core Role-Specific, 2-4 Baseline Applied, 3-5 Foundational & Leadership, 4-8 Specialization.",
+        `- Distribution: ${attempt === 1 ? `${complexity.coreTarget} Core Role-Specific, ${complexity.baselineTarget} Baseline Applied, ${complexity.foundationalTarget} Foundational & Leadership, ${complexity.specializationTarget} Specialization` : "reduce proportionally from targets above"}.`,
         "- NEVER combine two skills into one name (e.g., 'Python Data Engineering' → separate 'Python' + 'Data Engineering').",
         "- Apply Category Decision Rules (T1-T4) for every skill.",
         "- VARY required_level (mix of L1, L2, L3). VARY criticality (mix of must_have, important, nice_to_have).",
@@ -66,7 +147,7 @@ export async function POST(request: NextRequest) {
         const result = await invokeAgent(
           AGENT2_SYSTEM_PROMPT,
           userMessage,
-          64000,
+          tokenBudget,
           { prefill: '{\n  "meta":' }
         );
         rawText = result.text;
