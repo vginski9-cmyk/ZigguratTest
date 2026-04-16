@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { skillProfiles, ejcpVersions, jobDescriptions } from "@/lib/db/schema";
+import { enrichedProfiles, jobDescriptions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -9,52 +9,48 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const profile = await db
+    const profile = db
       .select()
-      .from(skillProfiles)
-      .where(eq(skillProfiles.id, id))
+      .from(enrichedProfiles)
+      .where(eq(enrichedProfiles.id, id))
       .get();
 
     if (!profile) {
-      return NextResponse.json(
-        { error: "Profile not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    const ejcp = await db
+    const jd = db
       .select()
-      .from(ejcpVersions)
-      .where(eq(ejcpVersions.id, profile.ejcpId))
+      .from(jobDescriptions)
+      .where(eq(jobDescriptions.id, profile.jdId))
       .get();
-
-    let jd = null;
-    if (ejcp) {
-      jd = await db
-        .select()
-        .from(jobDescriptions)
-        .where(eq(jobDescriptions.id, ejcp.jdId))
-        .get();
-    }
 
     return NextResponse.json({
       profile: {
-        ...profile,
-        data: JSON.parse(profile.data),
+        id: profile.id,
+        jdId: profile.jdId,
+        status: profile.status,
+        overallConfidence: profile.overallConfidence,
+        createdAt: profile.createdAt,
+        ejcp: JSON.parse(profile.ejcpData),
+        skills: JSON.parse(profile.skillData),
+        auditTrail: profile.auditTrail ? JSON.parse(profile.auditTrail) : null,
       },
-      ejcp: ejcp
+      jd: jd
         ? {
-            ...ejcp,
-            data: JSON.parse(ejcp.data),
+            id: jd.id,
+            jobTitle: jd.jobTitle,
+            company: jd.company,
+            location: jd.location,
+            onetCode: jd.onetCode,
+            seedSkills: jd.seedSkills ? JSON.parse(jd.seedSkills) : [],
+            postingUrl: jd.postingUrl,
+            rawText: jd.rawText,
           }
         : null,
-      jd,
     });
   } catch (error) {
-    console.error("Profile fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch profile" },
-      { status: 500 }
-    );
+    console.error("[profiles/id] Error:", error);
+    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
   }
 }

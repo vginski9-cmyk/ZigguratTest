@@ -34,28 +34,28 @@ export default function RootLayout({
               </Link>
               <div className="flex items-center gap-6">
                 <Link
-                  href="/submit"
+                  href="/ingest"
                   className="text-sm text-slate-300 hover:text-white transition-colors"
                 >
-                  Submit JD
+                  Ingest
                 </Link>
                 <Link
-                  href="/submit-bulk"
+                  href="/pipeline"
                   className="text-sm text-slate-300 hover:text-white transition-colors"
                 >
-                  Bulk Submit
-                </Link>
-                <Link
-                  href="/review"
-                  className="text-sm text-slate-300 hover:text-white transition-colors"
-                >
-                  Review Queue
+                  Pipeline
                 </Link>
                 <Link
                   href="/profiles"
                   className="text-sm text-slate-300 hover:text-white transition-colors"
                 >
                   Profiles
+                </Link>
+                <Link
+                  href="/analytics"
+                  className="text-sm text-slate-300 hover:text-white transition-colors"
+                >
+                  Analytics
                 </Link>
               </div>
             </div>

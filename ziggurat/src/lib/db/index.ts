@@ -19,6 +19,13 @@ sqlite.exec(`
     raw_text TEXT NOT NULL,
     source_url TEXT,
     text_hash TEXT NOT NULL,
+    job_title TEXT,
+    location TEXT,
+    onet_code TEXT,
+    company TEXT,
+    seed_skills TEXT,
+    posting_url TEXT,
+    input_status TEXT,
     submitted_by TEXT,
     submitted_at TEXT NOT NULL
   );
@@ -31,48 +38,43 @@ sqlite.exec(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
-  CREATE TABLE IF NOT EXISTS ejcp_versions (
+  CREATE TABLE IF NOT EXISTS enriched_profiles (
     id TEXT PRIMARY KEY,
     jd_id TEXT NOT NULL REFERENCES job_descriptions(id),
-    employer_id TEXT REFERENCES employers(id),
-    version INTEGER NOT NULL DEFAULT 1,
-    data TEXT NOT NULL,
-    validation_status TEXT NOT NULL DEFAULT 'draft',
-    agent_version TEXT,
-    reviewer_id TEXT,
-    reviewed_at TEXT,
-    change_diff TEXT,
-    created_at TEXT NOT NULL
+    ejcp_data TEXT NOT NULL,
+    skill_data TEXT NOT NULL,
+    audit_trail TEXT,
+    validator_output TEXT,
+    status TEXT NOT NULL DEFAULT 'processing',
+    overall_confidence INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT
   );
-  CREATE TABLE IF NOT EXISTS skill_profiles (
+  CREATE TABLE IF NOT EXISTS batch_jobs (
     id TEXT PRIMARY KEY,
-    ejcp_id TEXT NOT NULL REFERENCES ejcp_versions(id),
-    version INTEGER NOT NULL DEFAULT 1,
-    data TEXT NOT NULL,
-    validation_status TEXT NOT NULL DEFAULT 'draft',
-    agent_version TEXT,
-    reviewer_id TEXT,
-    reviewed_at TEXT,
-    change_diff TEXT,
-    created_at TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS skill_reviews (
-    id TEXT PRIMARY KEY,
-    profile_id TEXT NOT NULL REFERENCES skill_profiles(id),
-    skill_id TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    reviewer_id TEXT,
-    notes TEXT,
-    reviewed_at TEXT
-  );
-  CREATE TABLE IF NOT EXISTS review_queue (
-    id TEXT PRIMARY KEY,
-    entity_type TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
-    gate TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    assigned_to TEXT,
+    total_count INTEGER NOT NULL,
+    completed_count INTEGER NOT NULL DEFAULT 0,
+    failed_count INTEGER NOT NULL DEFAULT 0,
+    created_by TEXT,
     created_at TEXT NOT NULL,
     completed_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS batch_items (
+    id TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL REFERENCES batch_jobs(id),
+    jd_id TEXT,
+    enriched_profile_id TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    error TEXT,
+    created_at TEXT NOT NULL,
+    completed_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS saved_queries (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    query_params TEXT NOT NULL,
+    created_at TEXT NOT NULL
   );
 `);

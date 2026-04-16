@@ -1,3 +1,30 @@
+// ─── Provenance & Auditability ───
+
+export type ProvenanceSource =
+  | "JD_text"
+  | "web_search"
+  | "url_scrape"
+  | "seed_input"
+  | "inferred"
+  | "onet_data"
+  | "bls_data";
+
+export type ProvenanceState = "confirmed" | "inferred" | "unknown";
+
+export interface ProvenanceTag {
+  state: ProvenanceState;
+  confidence: number; // 0-100
+  sources: ProvenanceSource[];
+  evidence: string;
+}
+
+export interface ProvenancedField<T> {
+  value: T;
+  provenance: ProvenanceTag;
+}
+
+// ─── EJCP Types ───
+
 export interface LayerClassification {
   values?: string[];
   value?: string;
@@ -5,6 +32,7 @@ export interface LayerClassification {
   provenance: "extracted" | "inferred" | "unknown";
   evidence: string;
   narrative: string;
+  sources?: ProvenanceSource[];
   [key: string]: unknown;
 }
 
@@ -44,6 +72,8 @@ export interface ClarifyingQuestion {
   impact: string;
 }
 
+// ─── Skill Types ───
+
 export interface SkillEntry {
   skill_id: string;
   skill_name: string;
@@ -79,6 +109,9 @@ export interface SkillEntry {
   };
   adjustment_rationale: string;
   source_evidence: string[];
+  // Provenance fields for the new pipeline
+  seed_status?: "confirmed" | "expanded" | "rejected" | "new";
+  provenance?: ProvenanceTag;
 }
 
 export interface LearningMode {
@@ -111,13 +144,86 @@ export interface SkillProfileData {
   };
 }
 
-export interface ReviewQueueItem {
-  id: string;
-  entityType: string;
-  entityId: string;
-  gate: string;
+// ─── Enriched Profile (new unified output) ───
+
+export interface EnrichedProfile {
+  ejcp: EJCPData;
+  skills: SkillProfileData;
+  seed_skill_results: SeedSkillResult[];
+}
+
+export interface SeedSkillResult {
+  original_name: string;
+  normalized_name: string | null;
+  status: "confirmed" | "expanded" | "rejected";
+  reason: string;
+  matched_skill_id: string | null;
+}
+
+// ─── Audit Trail ───
+
+export interface AuditTrail {
+  confirmed_items: AuditItem[];
+  inferred_fixes: InferredFix[];
+  flagged_for_review: FlaggedItem[];
+  overall_confidence: number;
+  summary: string;
+}
+
+export interface AuditItem {
+  field: string;
+  value: string;
+  source: string;
+}
+
+export interface InferredFix {
+  field: string;
+  old_value: string;
+  new_value: string;
+  reason: string;
+  confidence: number;
+}
+
+export interface FlaggedItem {
+  field: string;
+  issue: string;
+  severity: "high" | "medium" | "low";
+  suggestion: string;
+}
+
+// ─── Ingestion ───
+
+export interface ParsedJDRow {
   status: string;
-  assignedTo: string | null;
-  createdAt: string;
-  completedAt: string | null;
+  jobTitle: string;
+  location: string;
+  onetCode: string;
+  company: string;
+  skills: string;
+  postingUrl: string;
+  jobDescription: string;
+}
+
+export interface ParseError {
+  row: number;
+  field: string;
+  message: string;
+}
+
+// ─── Analytics / Query ───
+
+export interface QueryParams {
+  filters: Record<string, string | string[] | number>;
+  groupBy: string[];
+  aggregation: "count" | "avg_confidence" | "list";
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+  limit?: number;
+}
+
+export interface QueryResult {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  totalCount: number;
+  groupCounts?: Record<string, number>;
 }

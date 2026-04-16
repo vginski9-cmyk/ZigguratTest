@@ -1,61 +1,54 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { skillProfiles, ejcpVersions } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { enrichedProfiles, jobDescriptions } from "@/lib/db/schema";
+import { desc, eq } from "drizzle-orm";
 
 export async function GET() {
   try {
-    const profiles = await db
+    const profiles = db
       .select()
-      .from(skillProfiles)
-      .orderBy(desc(skillProfiles.createdAt))
+      .from(enrichedProfiles)
+      .orderBy(desc(enrichedProfiles.createdAt))
+      .limit(200)
       .all();
 
-    const enrichedProfiles = await Promise.all(
-      profiles.map(async (profile) => {
-        const ejcp = await db
-          .select()
-          .from(ejcpVersions)
-          .where(eq(ejcpVersions.id, profile.ejcpId))
-          .get();
+    const results = profiles.map((profile) => {
+      const jd = db
+        .select({
+          jobTitle: jobDescriptions.jobTitle,
+          company: jobDescriptions.company,
+          location: jobDescriptions.location,
+          onetCode: jobDescriptions.onetCode,
+        })
+        .from(jobDescriptions)
+        .where(eq(jobDescriptions.id, profile.jdId))
+        .get();
 
-        let profileData;
-        try {
-          profileData = JSON.parse(profile.data);
-        } catch {
-          profileData = null;
-        }
+      let skillCount = 0;
+      let roleTitle = "";
+      try {
+        const skillData = JSON.parse(profile.skillData);
+        skillCount = skillData?.skills?.length || skillData?.meta?.total_skills || 0;
+        roleTitle = skillData?.meta?.role_title || "";
+      } catch { /* ignore */ }
 
-        let ejcpData;
-        try {
-          ejcpData = ejcp ? JSON.parse(ejcp.data) : null;
-        } catch {
-          ejcpData = null;
-        }
+      return {
+        id: profile.id,
+        jdId: profile.jdId,
+        jobTitle: jd?.jobTitle || roleTitle || "Untitled",
+        company: jd?.company || "",
+        location: jd?.location || "",
+        onetCode: jd?.onetCode || "",
+        status: profile.status,
+        overallConfidence: profile.overallConfidence,
+        skillCount,
+        createdAt: profile.createdAt,
+      };
+    });
 
-        return {
-          id: profile.id,
-          ejcpId: profile.ejcpId,
-          version: profile.version,
-          validationStatus: profile.validationStatus,
-          createdAt: profile.createdAt,
-          roleTitle: profileData?.meta?.role_title || "Untitled Role",
-          employer: profileData?.meta?.employer || "Unknown Employer",
-          location: profileData?.meta?.location || "Unknown",
-          skillCount: profileData?.skills?.length || 0,
-          socCode: profileData?.meta?.soc_code || "",
-          ejcpData,
-          profileData,
-        };
-      })
-    );
-
-    return NextResponse.json(enrichedProfiles);
+    return NextResponse.json(results);
   } catch (error) {
-    console.error("Profiles fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch profiles" },
-      { status: 500 }
-    );
+    console.error("[profiles] Error:", error);
+    return NextResponse.json({ error: "Failed to fetch profiles" }, { status: 500 });
   }
 }

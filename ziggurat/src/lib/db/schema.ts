@@ -5,6 +5,13 @@ export const jobDescriptions = sqliteTable("job_descriptions", {
   rawText: text("raw_text").notNull(),
   sourceUrl: text("source_url"),
   textHash: text("text_hash").notNull(),
+  jobTitle: text("job_title"),
+  location: text("location"),
+  onetCode: text("onet_code"),
+  company: text("company"),
+  seedSkills: text("seed_skills"), // JSON array of strings
+  postingUrl: text("posting_url"),
+  inputStatus: text("input_status"),
   submittedBy: text("submitted_by"),
   submittedAt: text("submitted_at").notNull(),
 });
@@ -19,66 +26,19 @@ export const employers = sqliteTable("employers", {
   updatedAt: text("updated_at").notNull(),
 });
 
-export const ejcpVersions = sqliteTable("ejcp_versions", {
+export const enrichedProfiles = sqliteTable("enriched_profiles", {
   id: text("id").primaryKey(),
   jdId: text("jd_id")
     .notNull()
     .references(() => jobDescriptions.id),
-  employerId: text("employer_id").references(() => employers.id),
-  version: integer("version").notNull().default(1),
-  data: text("data").notNull(), // JSON
-  validationStatus: text("validation_status").notNull().default("draft"),
-  agentVersion: text("agent_version"),
-  reviewerId: text("reviewer_id"),
-  reviewedAt: text("reviewed_at"),
-  changeDiff: text("change_diff"), // JSON
+  ejcpData: text("ejcp_data").notNull(), // JSON - full EJCP with provenance
+  skillData: text("skill_data").notNull(), // JSON - full skill profile with provenance
+  auditTrail: text("audit_trail"), // JSON - validator findings
+  validatorOutput: text("validator_output"), // JSON - raw validator response
+  status: text("status").notNull().default("processing"), // processing | validated | flagged | exported
+  overallConfidence: integer("overall_confidence"),
   createdAt: text("created_at").notNull(),
-});
-
-export const skillProfiles = sqliteTable("skill_profiles", {
-  id: text("id").primaryKey(),
-  ejcpId: text("ejcp_id")
-    .notNull()
-    .references(() => ejcpVersions.id),
-  version: integer("version").notNull().default(1),
-  data: text("data").notNull(), // JSON
-  validationStatus: text("validation_status").notNull().default("draft"),
-  agentVersion: text("agent_version"),
-  reviewerId: text("reviewer_id"),
-  reviewedAt: text("reviewed_at"),
-  changeDiff: text("change_diff"), // JSON
-  createdAt: text("created_at").notNull(),
-});
-
-export const skillReviews = sqliteTable("skill_reviews", {
-  id: text("id").primaryKey(),
-  profileId: text("profile_id")
-    .notNull()
-    .references(() => skillProfiles.id),
-  skillId: text("skill_id").notNull(),
-  status: text("status").notNull().default("pending"),
-  reviewerId: text("reviewer_id"),
-  notes: text("notes"),
-  reviewedAt: text("reviewed_at"),
-});
-
-export const reviewQueue = sqliteTable("review_queue", {
-  id: text("id").primaryKey(),
-  entityType: text("entity_type").notNull(), // 'ejcp' | 'profile'
-  entityId: text("entity_id").notNull(),
-  gate: text("gate").notNull(), // 'gate1' | 'gate2'
-  status: text("status").notNull().default("pending"),
-  assignedTo: text("assigned_to"),
-  createdAt: text("created_at").notNull(),
-  completedAt: text("completed_at"),
-});
-
-export const reviewDrafts = sqliteTable("review_drafts", {
-  id: text("id").primaryKey(),
-  profileId: text("profile_id").notNull(),
-  data: text("data").notNull(), // JSON
-  skillReviews: text("skill_reviews").notNull(), // JSON
-  savedAt: text("saved_at").notNull(),
+  updatedAt: text("updated_at"),
 });
 
 export const batchJobs = sqliteTable("batch_jobs", {
@@ -87,7 +47,6 @@ export const batchJobs = sqliteTable("batch_jobs", {
   totalCount: integer("total_count").notNull(),
   completedCount: integer("completed_count").notNull().default(0),
   failedCount: integer("failed_count").notNull().default(0),
-  mode: text("mode").notNull().default("auto"), // auto | reviewed
   createdBy: text("created_by"),
   createdAt: text("created_at").notNull(),
   completedAt: text("completed_at"),
@@ -99,10 +58,17 @@ export const batchItems = sqliteTable("batch_items", {
     .notNull()
     .references(() => batchJobs.id),
   jdId: text("jd_id"),
-  ejcpId: text("ejcp_id"),
-  profileId: text("profile_id"),
-  status: text("status").notNull().default("pending"), // pending | agent1 | agent2 | completed | failed
+  enrichedProfileId: text("enriched_profile_id"),
+  status: text("status").notNull().default("pending"), // pending | researching | validating | completed | failed
   error: text("error"),
   createdAt: text("created_at").notNull(),
   completedAt: text("completed_at"),
+});
+
+export const savedQueries = sqliteTable("saved_queries", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  queryParams: text("query_params").notNull(), // JSON
+  createdAt: text("created_at").notNull(),
 });
