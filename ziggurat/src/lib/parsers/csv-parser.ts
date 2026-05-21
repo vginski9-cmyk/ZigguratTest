@@ -34,8 +34,17 @@ export function parseCSVText(text: string): {
   rows: ParsedJDRow[];
   errors: ParseError[];
 } {
+  // Auto-detect delimiter: tab, comma, or pipe
+  const firstLine = text.split("\n")[0] || "";
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const pipeCount = (firstLine.match(/\|/g) || []).length;
+  const delimiter = tabCount >= commaCount && tabCount >= pipeCount ? "\t"
+    : pipeCount > commaCount ? "|" : ",";
+
   const result = Papa.parse(text, {
     header: true,
+    delimiter,
     skipEmptyLines: true,
     transformHeader: (h: string) => h.trim(),
   });
@@ -47,18 +56,7 @@ export function parseTabSeparated(text: string): {
   rows: ParsedJDRow[];
   errors: ParseError[];
 } {
-  // Detect if tab-separated or CSV
-  const firstLine = text.split("\n")[0];
-  const delimiter = firstLine.includes("\t") ? "\t" : ",";
-
-  const result = Papa.parse(text, {
-    header: true,
-    delimiter,
-    skipEmptyLines: true,
-    transformHeader: (h: string) => h.trim(),
-  });
-
-  return processRows(result.data as Record<string, string>[], result.meta.fields || []);
+  return parseCSVText(text);
 }
 
 function processRows(

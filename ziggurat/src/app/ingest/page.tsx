@@ -30,7 +30,7 @@ export default function IngestPage() {
         res = await fetch("/api/ingest", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: pasteText, format: "csv" }),
+          body: JSON.stringify({ data: pasteText, format: "auto" }),
         });
       } else {
         setError("Please provide data to ingest");

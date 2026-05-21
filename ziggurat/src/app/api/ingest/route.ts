@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { jobDescriptions, batchJobs, batchItems } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
 import { createHash } from "crypto";
-import { parseCSVText, parseTabSeparated, parseSeedSkills } from "@/lib/parsers/csv-parser";
+import { parseCSVText, parseSeedSkills } from "@/lib/parsers/csv-parser";
 import { parseXLSXBuffer } from "@/lib/parsers/xlsx-parser";
 import type { ParsedJDRow } from "@/lib/ziggurat/types";
 
@@ -42,15 +42,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "No data provided" }, { status: 400 });
       }
 
-      if (format === "csv") {
-        const result = parseCSVText(data);
-        rows = result.rows;
-        parseErrors = result.errors;
-      } else {
-        const result = parseTabSeparated(data);
-        rows = result.rows;
-        parseErrors = result.errors;
-      }
+      // parseCSVText auto-detects delimiter (tab, comma, pipe)
+      const result = parseCSVText(data);
+      rows = result.rows;
+      parseErrors = result.errors;
     }
 
     if (rows.length === 0) {
